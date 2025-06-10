@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Animales</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        table { border-collapse: collapse; width: 60%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #eee; }
+        input, button { margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>CRUD Animales</h1>
+    <form id="animalForm">
+        <input type="number" id="id" placeholder="ID_ANIMAL" required>
+        <input type="text" id="nombre" placeholder="NOMBRE_ANIMAL" required>
+        <input type="text" id="especie" placeholder="ESPECIE_ANIMAL" required>
+        <button type="submit" id="submitBtn">Agregar</button>
+        <button type="button" id="cancelBtn" style="display:none;">Cancelar</button>
+    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Especie</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tablaAnimales"></tbody>
+    </table>
+    <script>
+        const apiUrl = '/api/animales';
+        let editando = false;
+        let idEditando = null;
+
+        function cargarAnimales() {
+            fetch(apiUrl)
+                .then(res => res.json())
+                .then(animales => {
+                    const tbody = document.getElementById('tablaAnimales');
+                    tbody.innerHTML = '';
+                    animales.forEach(animal => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${animal.ID_ANIMAL}</td>
+                                <td>${animal.NOMBRE_ANIMAL}</td>
+                                <td>${animal.ESPECIE_ANIMAL}</td>
+                                <td>
+                                    <button onclick="editarAnimal(${animal.ID_ANIMAL}, '${animal.NOMBRE_ANIMAL}', '${animal.ESPECIE_ANIMAL}')">Editar</button>
+                                    <button onclick="eliminarAnimal(${animal.ID_ANIMAL})">Eliminar</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+
+        document.getElementById('animalForm').onsubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('id').value;
+            const nombre = document.getElementById('nombre').value;
+            const especie = document.getElementById('especie').value;
+
+            if (!editando) {
+                // Agregar
+                fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ID_ANIMAL: Number(id), NOMBRE_ANIMAL: nombre, ESPECIE_ANIMAL: especie })
+                })
+                .then(res => {
+                    if (res.ok) {
+                        cargarAnimales();
+                        this.reset();
+                    } else {
+                        alert('Error al agregar animal');
+                    }
+                });
+            } else {
+                // Actualizar
+                fetch(apiUrl + '/' + idEditando, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ NOMBRE_ANIMAL: nombre, ESPECIE_ANIMAL: especie })
+                })
+                .then(res => {
+                    if (res.ok) {
+                        cargarAnimales();
+                        this.reset();
+                        editando = false;
+                        idEditando = null;
+                        document.getElementById('submitBtn').textContent = 'Agregar';
+                        document.getElementById('id').disabled = false;
+                        document.getElementById('cancelBtn').style.display = 'none';
+                    } else {
+                        alert('Error al actualizar animal');
+                    }
+                });
+            }
+        };
+
+        function editarAnimal(id, nombre, especie) {
+            document.getElementById('id').value = id;
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('especie').value = especie;
+            editando = true;
+            idEditando = id;
+            document.getElementById('submitBtn').textContent = 'Actualizar';
+            document.getElementById('id').disabled = true;
+            document.getElementById('cancelBtn').style.display = 'inline';
+        }
+
+        function eliminarAnimal(id) {
+            fetch(apiUrl + '/' + id, { method: 'DELETE' })
+                .then(res => {
+                    if (res.ok) cargarAnimales();
+                    else alert('Error al eliminar');
+                });
+        }
+
+        document.getElementById('cancelBtn').onclick = function() {
+            document.getElementById('animalForm').reset();
+            editando = false;
+            idEditando = null;
+            document.getElementById('submitBtn').textContent = 'Agregar';
+            document.getElementById('id').disabled = false;
+            this.style.display = 'none';
+        };
+
+        cargarAnimales();
+        // Hacer accesibles las funciones para los botones
+        window.editarAnimal = editarAnimal;
+        window.eliminarAnimal = eliminarAnimal;
+    </script>
+</body>
+</html>
